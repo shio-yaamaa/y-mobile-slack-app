@@ -7,11 +7,17 @@ plugins:
 provider:
   name: aws
   runtime: nodejs8.10
+  stage: dev
+  region: ap-northeast-1
+  timeout: 30
 
 functions:
-  hello:
-    handler: handler.hello
+  notify:
+    handler: src/functions/notify.handler
     events:
-      - http:
-          method: get
-          path: hello
+      - schedule: cron(0 15 * * ? *)
+
+package:
+  exclude:
+    - .git/**
+    - README.md
