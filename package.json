@@ -4,6 +4,7 @@
   "description": "Y! mobile data usage notification on Slack",
   "scripts": {},
   "dependencies": {
+    "axios": "^0.18.0",
     "source-map-support": "^0.5.10"
   },
   "devDependencies": {
