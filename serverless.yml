@@ -16,6 +16,8 @@ functions:
     handler: src/functions/notify.handler
     events:
       - schedule: cron(0 15 * * ? *)
+  fetch:
+    handler: src/functions/fetch.handler
 
 package:
   exclude:
