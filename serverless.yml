@@ -18,6 +18,8 @@ functions:
       - schedule: cron(0 15 * * ? *)
   fetch:
     handler: src/functions/fetch.handler
+  generate-chart-url:
+    handler: src/functions/generate-chart-url.handler
 
 package:
   exclude:
