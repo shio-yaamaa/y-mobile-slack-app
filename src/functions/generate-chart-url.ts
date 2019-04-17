@@ -5,6 +5,7 @@ const quickchartUrl = 'https://quickchart.io/chart';
 
 interface DailyStatistics {
   date: number;
+  hour: number;
   availableAmount: number;
   dailyUsage: number;
   currentUsage: number;
