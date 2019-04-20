@@ -59,9 +59,13 @@ const getTotalDataUsage = async (baseRequest: request.RequestAPI<request.Request
         form.children().filter('input').each((_index, input) => {
           formData[$(input).attr('name')] = $(input).attr('value');
         });
+
         baseRequest.post(
           formAction,
-          { form: formData },
+          {
+            baseUrl: null,
+            form: formData,
+          },
           (error, _response, body) => {
             if (error) reject(error);
 
