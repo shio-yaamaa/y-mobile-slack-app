@@ -26,3 +26,9 @@ const c = {
   }
 };
 ```
+
+# Event Triggers
+
+- `fetch`: Hourly
+- `generate-chart-url`: Daily
+- `notify`: After `generate-chart-url`
