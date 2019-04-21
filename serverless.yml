@@ -23,6 +23,26 @@ functions:
   generate-chart-url:
     handler: src/functions/generate-chart-url.handler
 
+resources:
+  Resources:
+    DataUsageRecordsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: DataUsageRecords
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
 package:
   exclude:
     - .git/**
