@@ -12,6 +12,7 @@ interface DailyStatistics {
 }
 
 const generateChartConfig = (data: DailyStatistics[]): Object => {
+  data;
   return {};
 };
 
@@ -22,6 +23,13 @@ const generateChartUrl = (data: DailyStatistics[]): string => {
 };
 
 export const handler: APIGatewayProxyHandler = async (event, _context) => {
+  generateChartUrl([{
+    date: 0,
+    hour: 0,
+    availableAmount: 0,
+    dailyUsage: 0,
+    currentUsage: 0,
+  }]);
   return {
     statusCode: 200,
     body: JSON.stringify({

@@ -131,11 +131,15 @@ const getDataUsageInfoForSingleUser = async (): Promise<DataUsageInfo> => {
     followAllRedirects: true,
   });
 
+  const credential: Credential = {
+    msn: '',
+    password: '',
+  };
   await login(baseRequest, credential);
   const currentDataUsage = await getCurrentDataUsage(baseRequest);
-  const remaininDataUsage = await getRemainingDataUsage(baseRequest);
+  const remainingDataUsage = await getRemainingDataUsage(baseRequest);
   return {
-    total: currentDataUsage + remaininDataUsage,
+    total: currentDataUsage + remainingDataUsage,
     current: currentDataUsage,
   };
 };
