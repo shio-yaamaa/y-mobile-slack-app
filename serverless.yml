@@ -10,18 +10,31 @@ provider:
   stage: dev
   region: ap-northeast-1
   timeout: 30
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeTable
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/DataUsageRecords
   environment:
+    DYNAMODB_REGION: ${self:provider.region}
+    DYNAMODB_TABLE_NAME: ${self:resources.Resources.DataUsageRecordsTable.Properties.TableName}
     SENTRY_DSN: ${file(./.env.yml):SENTRY_DSN}
 
 functions:
-  notify:
-    handler: src/functions/notify.handler
-    events:
-      - schedule: cron(0 15 * * ? *)
   fetch:
     handler: src/functions/fetch.handler
   generate-chart-url:
     handler: src/functions/generate-chart-url.handler
+  notify:
+    handler: src/functions/notify.handler
+    events:
+      - schedule: cron(0 15 * * ? *)
 
 resources:
   Resources:

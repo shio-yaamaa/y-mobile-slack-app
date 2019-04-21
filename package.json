@@ -5,6 +5,7 @@
   "scripts": {},
   "dependencies": {
     "@sentry/node": "^5.1.0",
+    "aws-sdk": "^2.441.0",
     "axios": "^0.18.0",
     "cheerio": "^1.0.0-rc.3",
     "request": "^2.88.0",

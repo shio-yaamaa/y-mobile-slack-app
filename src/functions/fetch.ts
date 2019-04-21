@@ -2,22 +2,14 @@ import { APIGatewayProxyHandler } from 'aws-lambda';
 import 'source-map-support/register';
 import * as request from 'request';
 import * as cheerio from 'cheerio';
+import * as Sentry from '@sentry/node';
 
-const Sentry = require('@sentry/node');
+import { User, Credential, DataUsageInfo } from '../types';
+import DB from '../lib/DB';
+
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
 });
-
-interface Credential {
-  msn: string; // Softbank refers to phone numbers as "msn"
-  password: string;
-}
-
-// In GB
-interface DataUsageInfo {
-  total: number; // Current + remaining usage
-  current: number;
-}
 
 const baseUrl = 'https://my.ymobile.jp/';
 const loginEndpoint = '/muc/d/auth/doLogin/';
@@ -119,7 +111,7 @@ const getRemainingDataUsage = async (baseRequest: request.RequestAPI<request.Req
   });
 };
 
-const getDataUsageInfoForSingleUser = async (): Promise<DataUsageInfo> => {
+const getDataUsageInfoForSingleUser = async (user: User): Promise<DataUsageInfo> => {
   const jar = request.jar();
 
   const baseRequest = request.defaults({
@@ -131,11 +123,7 @@ const getDataUsageInfoForSingleUser = async (): Promise<DataUsageInfo> => {
     followAllRedirects: true,
   });
 
-  const credential: Credential = {
-    msn: '',
-    password: '',
-  };
-  await login(baseRequest, credential);
+  await login(baseRequest, { msn: user.msn, password: user.password });
   const currentDataUsage = await getCurrentDataUsage(baseRequest);
   const remainingDataUsage = await getRemainingDataUsage(baseRequest);
   return {
@@ -146,16 +134,25 @@ const getDataUsageInfoForSingleUser = async (): Promise<DataUsageInfo> => {
 
 export const handler: APIGatewayProxyHandler = async (event, _context) => {
   try {
-    getDataUsageInfoForSingleUser();
+    const users = await DB.getAllUsers();
+    getDataUsageInfoForSingleUser(users[0]);
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: JSON.stringify(users[0]),
+        input: event,
+      }),
+    };
   } catch (error) {
     Sentry.captureException(error);
+    
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        message: 'An error occurred',
+        input: event,
+      }),
+    };
   }
-  
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      message: 'Success',
-      input: event,
-    }),
-  };
 };
