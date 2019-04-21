@@ -1,3 +1,9 @@
+# Event Triggers
+
+- `fetch`: Hourly
+- `generate-chart-url`: Daily
+- `notify`: After `generate-chart-url`
+
 # Example of QuickChart config
 
 ## Mixed Chart Types
@@ -27,8 +33,28 @@ const c = {
 };
 ```
 
-# Event Triggers
+# Table Schema
 
-- `fetch`: Hourly
-- `generate-chart-url`: Daily
-- `notify`: After `generate-chart-url`
+```javascript
+{
+  pk: 'user',
+  sk: '0000', // User ID
+  slackWebhookUrl: 'https://...',
+  msn: '...',
+  password: '...',
+},
+...
+{
+  pk: 'month-201904',
+  sk: '0000', // Corresponds to the user's SK
+  records: [
+    {
+      date: 1,
+      hour: 0,
+      data: whatever
+    },
+    ...
+  ],
+},
+...
+```
