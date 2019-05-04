@@ -77,10 +77,10 @@ class DB {
       const params: AWS.DynamoDB.DocumentClient.UpdateItemInput = {
         TableName: process.env.DYNAMODB_TABLE_NAME,
         Key: {
-          'pk': record.datetime.toPk(),
-          'sk': user.id,
+          pk: record.datetime.toPk(),
+          sk: user.id,
         },
-        UpdateExpression: "SET #r = list_append(if_not_exists(#r, :e), :r)",
+        UpdateExpression: 'SET #r = list_append(if_not_exists(#r, :e), :r)',
         ExpressionAttributeNames: {
           '#r': 'records'
         },

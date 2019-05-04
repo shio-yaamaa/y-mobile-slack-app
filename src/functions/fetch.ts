@@ -1,3 +1,6 @@
+// This might break when the DOM structure of the page changes.
+// But there are very few IDs or classes that can be used to identify the target element.
+
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import 'source-map-support/register';
 import * as request from 'request';
@@ -16,6 +19,7 @@ Sentry.init({
 const baseUrl = 'https://my.ymobile.jp/';
 const loginEndpoint = '/muc/d/auth/doLogin/';
 const topEndpoint = '/muc/d/top/';
+const contractEndpoint = `/muc/d/webLink/doSend/MWBWL0020`;
 const usageEndpoint = '/muc/d/webLink/doSend/MRERE0000';
 
 // Some information is only available in the smartphone page
@@ -34,6 +38,50 @@ const login = async (baseRequest: request.RequestAPI<request.Request, request.Co
       error => {
         if (error) reject(error);
         resolve();
+      },
+    );
+  });
+};
+
+const getInitialTotalDataUsage = async (baseRequest: request.RequestAPI<request.Request, request.CoreOptions, request.RequiredUriUrl>): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    baseRequest.get(
+      contractEndpoint,
+      (error, _response, body) => {
+        if (error) reject(error);
+
+        const $ = cheerio.load(body);
+        const form = $('form[name="webLink"]').first();
+        const formAction = form.attr('action');
+        const formData: { [key: string]: string } = {};
+        form.children().filter('input').each((_index, input) => {
+          formData[$(input).attr('name')] = $(input).attr('value');
+        });
+
+        baseRequest.post(
+          formAction,
+          {
+            baseUrl: null,
+            form: formData,
+          },
+          (error, _response, body) => {
+            if (error) reject(error);
+
+            const $ = cheerio.load(body);
+            const contractDetailContainer = $('.contractual_detail');
+            const currentContractTitle = contractDetailContainer.children().filter((_index, element) => {
+              return $(element).text().includes('現在のご契約');
+            }).first();
+            const currentContractWrap = currentContractTitle.next();
+            const dataAmountBox = currentContractWrap.find('.unit-box').eq(1);
+            const dataAmountElement = dataAmountBox.children().eq(0).children().eq(0).children().eq(1);
+            const totalDataUsage = parseFloat(dataAmountElement.text()); // Unit is automatically ignored
+
+            if (isNaN(totalDataUsage)) reject(new Error('Invalid total data usage'));
+
+            resolve(totalDataUsage);
+          },
+        );
       },
     );
   });
@@ -94,8 +142,6 @@ const getRemainingDataUsage = async (baseRequest: request.RequestAPI<request.Req
             if (error) reject(error);
 
             const $ = cheerio.load(body);
-            // This might break when the DOM structure of the page changes.
-            // But there are very few IDs or classes that can be used to identify the target element.
             const contractInfoTables = $('table.contract-info');
             const remainingDataUsageRow = contractInfoTables.find('tr').filter((_index, row) => {
               return $(row).text().includes('追加料金課金までの残りデータ量');
@@ -126,10 +172,11 @@ const getDataUsageForSingleUser = async (user: User): Promise<DataUsageAmounts> 
   });
 
   await login(baseRequest, user.ymobileCredential);
+  const initialTotalDataUsage = await getInitialTotalDataUsage(baseRequest);
   const currentDataUsage = await getCurrentDataUsage(baseRequest);
   const remainingDataUsage = await getRemainingDataUsage(baseRequest);
   return {
-    total: currentDataUsage + remainingDataUsage,
+    total: Math.max(initialTotalDataUsage, currentDataUsage + remainingDataUsage),
     current: currentDataUsage,
   };
 };
