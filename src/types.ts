@@ -3,10 +3,10 @@ import JSTDateTime from './lib/JSTDateTime';
 export interface User {
   id: string;
   slackWebhookUrl: string;
-  yMobileCredential: YMobileCredential;
+  ymobileCredential: YmobileCredential;
 }
 
-export interface YMobileCredential {
+export interface YmobileCredential {
   msn: string; // Softbank refers to phone numbers as "msn"
   password: string;
 }

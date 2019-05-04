@@ -4,7 +4,9 @@ import * as request from 'request';
 import * as cheerio from 'cheerio';
 import * as Sentry from '@sentry/node';
 
-import { User, Credential, DataUsageInfo } from '../types';
+import { User, YmobileCredential, DataUsageAmounts } from '../types';
+
+import JSTDateTime from '../lib/JSTDateTime';
 import DB from '../lib/DB';
 
 Sentry.init({
@@ -19,7 +21,7 @@ const usageEndpoint = '/muc/d/webLink/doSend/MRERE0000';
 // Some information is only available in the smartphone page
 const smartphoneUserAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1';
 
-const login = async (baseRequest: request.RequestAPI<request.Request, request.CoreOptions, request.RequiredUriUrl>, credential: Credential): Promise<void> => {
+const login = async (baseRequest: request.RequestAPI<request.Request, request.CoreOptions, request.RequiredUriUrl>, credential: YmobileCredential): Promise<void> => {
   return new Promise((resolve, reject) => {
     baseRequest.post(
       loginEndpoint,
@@ -111,7 +113,7 @@ const getRemainingDataUsage = async (baseRequest: request.RequestAPI<request.Req
   });
 };
 
-const getDataUsageInfoForSingleUser = async (user: User): Promise<DataUsageInfo> => {
+const getDataUsageForSingleUser = async (user: User): Promise<DataUsageAmounts> => {
   const jar = request.jar();
 
   const baseRequest = request.defaults({
@@ -123,7 +125,7 @@ const getDataUsageInfoForSingleUser = async (user: User): Promise<DataUsageInfo>
     followAllRedirects: true,
   });
 
-  await login(baseRequest, { msn: user.msn, password: user.password });
+  await login(baseRequest, user.ymobileCredential);
   const currentDataUsage = await getCurrentDataUsage(baseRequest);
   const remainingDataUsage = await getRemainingDataUsage(baseRequest);
   return {
@@ -134,8 +136,19 @@ const getDataUsageInfoForSingleUser = async (user: User): Promise<DataUsageInfo>
 
 export const handler: APIGatewayProxyHandler = async (event, _context) => {
   try {
+    const currentDateTime = new JSTDateTime();
     const users = await DB.getAllUsers();
-    getDataUsageInfoForSingleUser(users[0]);
+    // TODO: If a user fails, don't skip others.
+    for (const user of users) {
+      const dataUsageAmounts = await getDataUsageForSingleUser(users[0]);
+      await DB.addDataUsageRecord(
+        user,
+        {
+          datetime: currentDateTime,
+          dataUsageAmounts: dataUsageAmounts,
+        }
+      );
+    }
 
     return {
       statusCode: 200,
@@ -146,7 +159,7 @@ export const handler: APIGatewayProxyHandler = async (event, _context) => {
     };
   } catch (error) {
     Sentry.captureException(error);
-    
+
     return {
       statusCode: 500,
       body: JSON.stringify({

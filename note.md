@@ -4,6 +4,39 @@
 - `generate-chart-url`: Daily
 - `notify`: After `generate-chart-url`
 
+# Table Schema
+
+```javascript
+{
+  pk: 'user',
+  sk: '0000', // User ID
+  slackWebhookUrl: 'https://...',
+  ymobileCredential: {
+    msn: '...',
+    password: '...',
+  },
+},
+...
+{
+  pk: 'month-201904',
+  sk: '0000', // Corresponds to the user's SK
+  records: [
+    {
+      hour: {
+        date: number,
+        hour: number,
+      },
+      dataUsageAmounts: {
+        total: number,
+        current: number,
+      },
+    },
+    ...
+  ],
+},
+...
+```
+
 # Example of QuickChart config
 
 ## Mixed Chart Types
@@ -31,30 +64,4 @@ const c = {
     ]
   }
 };
-```
-
-# Table Schema
-
-```javascript
-{
-  pk: 'user',
-  sk: '0000', // User ID
-  slackWebhookUrl: 'https://...',
-  msn: '...',
-  password: '...',
-},
-...
-{
-  pk: 'month-201904',
-  sk: '0000', // Corresponds to the user's SK
-  records: [
-    {
-      date: 1,
-      hour: 0,
-      data: whatever
-    },
-    ...
-  ],
-},
-...
 ```
