@@ -1,6 +1,3 @@
-// This might break when the DOM structure of the page changes.
-// But there are very few IDs or classes that can be used to identify the target element.
-
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import 'source-map-support/register';
 import * as request from 'request';
@@ -95,8 +92,6 @@ const getCurrentDataUsage = async (baseRequest: request.RequestAPI<request.Reque
         if (error) reject(error);
 
         const $ = cheerio.load(body);
-        // This might break when the DOM structure of the page changes.
-        // But there are very few IDs or classes that can be used to identify the target element.
         const dataAmountContainer = $('#data_amount');
         const rightColumn = dataAmountContainer.children().eq(1).children().eq(1);
         const dataAmountRow = (() => {
@@ -181,38 +176,45 @@ const getDataUsageForSingleUser = async (user: User): Promise<DataUsageAmounts> 
   };
 };
 
-export const handler: APIGatewayProxyHandler = async (event, _context) => {
+export const handler: APIGatewayProxyHandler = async (_event, _context) => {
+  const currentDateTime = new JSTDateTime();
+  let users = [];
   try {
-    const currentDateTime = new JSTDateTime();
-    const users = await DB.getAllUsers();
-    // TODO: If a user fails, don't skip others.
-    for (const user of users) {
-      const dataUsageAmounts = await getDataUsageForSingleUser(users[0]);
+    users = await DB.getAllUsers();
+  } catch (error) {
+    Sentry.captureException(error);
+    return {
+      statusCode: 500,
+      body: 'Could not get users from DB',
+    };
+  }
+  
+  // Resolves with an error (do not throw it) when error occurs
+  // so that Promise.all waits until all the tasks finish
+  // even if some of them fail.
+  const fetchForUser = async (user: User): Promise<void | Error> => {
+    try {
+      const dataUsageAmounts = await getDataUsageForSingleUser(user);
       await DB.addDataUsageRecord(
         user,
         {
           datetime: currentDateTime,
           dataUsageAmounts: dataUsageAmounts,
-        }
+        },
       );
+      return;
+    } catch (error) {
+      Sentry.captureException(error);
+      return error;
     }
+  };
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        message: JSON.stringify(users[0]),
-        input: event,
-      }),
-    };
-  } catch (error) {
-    Sentry.captureException(error);
-
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        message: 'An error occurred',
-        input: event,
-      }),
-    };
-  }
+  Promise.all(users.map(user => fetchForUser(user)))
+    .then(results => {
+      const didAllSucceed = results.every(result => !(result instanceof Error));
+      return {
+        statusCode: didAllSucceed ? 200 : 500,
+        body: didAllSucceed ? 'Success' : 'At least one user failed',
+      };
+    });
 };
