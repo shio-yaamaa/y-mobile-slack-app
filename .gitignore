@@ -139,5 +139,5 @@ typings/
 # Webpack directories
 .webpack
 
-# Custom env files
-.env.yml
+# Custom secret file
+secrets.yml

@@ -24,7 +24,7 @@ provider:
   environment:
     DYNAMODB_REGION: ${self:provider.region}
     DYNAMODB_TABLE_NAME: ${self:resources.Resources.DataUsageRecordsTable.Properties.TableName}
-    SENTRY_DSN: ${file(./.env.yml):SENTRY_DSN}
+    SENTRY_DSN: ${file(./secrets.yml):SENTRY_DSN}
 
 functions:
   fetch:
