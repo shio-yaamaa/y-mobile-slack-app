@@ -209,12 +209,10 @@ export const handler: APIGatewayProxyHandler = async (_event, _context) => {
     }
   };
 
-  Promise.all(users.map(user => fetchForUser(user)))
-    .then(results => {
-      const didAllSucceed = results.every(result => !(result instanceof Error));
-      return {
-        statusCode: didAllSucceed ? 200 : 500,
-        body: didAllSucceed ? 'Success' : 'At least one user failed',
-      };
-    });
+  const results = await Promise.all(users.map(user => fetchForUser(user)));
+  const didAllSucceed = results.every(result => !(result instanceof Error));
+  return {
+    statusCode: didAllSucceed ? 200 : 500,
+    body: didAllSucceed ? 'Success' : 'At least one user failed',
+  };
 };
