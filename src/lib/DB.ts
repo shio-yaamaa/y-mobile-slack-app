@@ -2,6 +2,8 @@ import * as AWS from 'aws-sdk';
 
 import { User, DataUsageRecord } from '../types';
 
+import JSTDateTime from '../lib/JSTDateTime';
+
 interface DBUser {
   pk: 'user';
   sk: string; // User ID
@@ -12,11 +14,11 @@ interface DBUser {
   };
 }
 
-// interface DBMonthlyRecords {
-//   pk: string;
-//   sk: string; // Corresponds to the user's SK
-//   records: DBRecord[];
-// }
+interface DBMonthlyRecord {
+  pk: string;
+  sk: string; // Corresponds to the user's SK
+  records: DBRecord[];
+}
 
 interface DBRecord {
   hour: {
@@ -26,6 +28,33 @@ interface DBRecord {
   dataUsageAmounts: {
     total: number;
     current: number;
+  };
+}
+
+const JSTDateTimeToPk = (datetime: JSTDateTime): string => {
+  const paddedMonthString = `0${datetime.month}`.slice(-2);
+  return `month-${datetime.year}${paddedMonthString}`;
+};
+
+const DataUsageRecordToDBRecord = (record: DataUsageRecord): DBRecord => {
+  return {
+    hour: {
+      date: record.datetime.date,
+      hour: record.datetime.hour,
+    },
+    dataUsageAmounts: record.dataUsageAmounts,
+  };
+};
+
+const DBRecordToDataUsageRecord = (yearMonth: JSTDateTime, record: DBRecord): DataUsageRecord => {
+  return {
+    datetime: new JSTDateTime({
+      year: yearMonth.year,
+      month: yearMonth.month,
+      date: record.hour.date,
+      hour: record.hour.hour,
+    }),
+    dataUsageAmounts: record.dataUsageAmounts,
   };
 }
 
@@ -65,19 +94,34 @@ class DB {
     });
   }
 
+  // Returns an array of DataUsageRecord sorted by datetime
+  public async getUsageRecordsOfMonth(user: User, datetime: JSTDateTime): Promise<DataUsageRecord[]> {
+    return new Promise((resolve, reject) => {
+      const params: AWS.DynamoDB.DocumentClient.GetItemInput = {
+        TableName: process.env.DYNAMODB_TABLE_NAME,
+        Key: {
+          pk: JSTDateTimeToPk(datetime),
+          sk: user.id,
+        },
+      };
+      this.documentClient.get(params, (error, data) => {
+        if (error) reject(error);
+        const monthlyRecord = data.Item as DBMonthlyRecord;
+        resolve(
+          monthlyRecord.records
+            .map(dbRecord => DBRecordToDataUsageRecord(datetime, dbRecord))
+            .sort((record1, record2) => JSTDateTime.compare(record1.datetime, record2.datetime))
+        );
+      });
+    });
+  }
+
   public async addDataUsageRecord(user: User, record: DataUsageRecord): Promise<void> {
     return new Promise((resolve, reject) => {
-      const dbRecord: DBRecord = {
-        hour: {
-          date: record.datetime.date,
-          hour: record.datetime.hour,
-        },
-        dataUsageAmounts: record.dataUsageAmounts,
-      };
       const params: AWS.DynamoDB.DocumentClient.UpdateItemInput = {
         TableName: process.env.DYNAMODB_TABLE_NAME,
         Key: {
-          pk: record.datetime.toPk(),
+          pk: JSTDateTimeToPk(record.datetime),
           sk: user.id,
         },
         UpdateExpression: 'SET #r = list_append(if_not_exists(#r, :e), :r)',
@@ -86,7 +130,7 @@ class DB {
         },
         ExpressionAttributeValues: {
           ':e': [],
-          ':r': [dbRecord],
+          ':r': [DataUsageRecordToDBRecord(record)],
         },
       };
       this.documentClient.update(params, (error, _data) => {

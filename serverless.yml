@@ -36,7 +36,7 @@ functions:
   notify:
     handler: src/functions/notify.handler
     events:
-      - schedule: cron(0 15 * * ? *)
+      - schedule: cron(0 15 * * ? *) # 0AM everyday in Asia/Tokyo
 
 resources:
   Resources:
