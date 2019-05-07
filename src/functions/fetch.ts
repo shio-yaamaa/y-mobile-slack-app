@@ -40,7 +40,7 @@ const login = async (baseRequest: request.RequestAPI<request.Request, request.Co
   });
 };
 
-const getInitialTotalDataUsage = async (baseRequest: request.RequestAPI<request.Request, request.CoreOptions, request.RequiredUriUrl>): Promise<number> => {
+const getInitialDataUsageCapacity = async (baseRequest: request.RequestAPI<request.Request, request.CoreOptions, request.RequiredUriUrl>): Promise<number> => {
   return new Promise((resolve, reject) => {
     baseRequest.get(
       contractEndpoint,
@@ -72,11 +72,11 @@ const getInitialTotalDataUsage = async (baseRequest: request.RequestAPI<request.
             const currentContractWrap = currentContractTitle.next();
             const dataAmountBox = currentContractWrap.find('.unit-box').eq(1);
             const dataAmountElement = dataAmountBox.children().eq(0).children().eq(0).children().eq(1);
-            const totalDataUsage = parseFloat(dataAmountElement.text()); // Unit is automatically ignored
+            const dataUsageCapacity = parseFloat(dataAmountElement.text()); // Unit is automatically ignored
 
-            if (isNaN(totalDataUsage)) reject(new Error('Invalid total data usage'));
+            if (isNaN(dataUsageCapacity)) reject(new Error('Invalid data usage capacity'));
 
-            resolve(totalDataUsage);
+            resolve(dataUsageCapacity);
           },
         );
       },
@@ -167,11 +167,11 @@ const getDataUsageForSingleUser = async (user: User): Promise<DataUsageAmounts> 
   });
 
   await login(baseRequest, user.ymobileCredential);
-  const initialTotalDataUsage = await getInitialTotalDataUsage(baseRequest);
+  const initialDataUsageCapacity = await getInitialDataUsageCapacity(baseRequest);
   const currentDataUsage = await getCurrentDataUsage(baseRequest);
   const remainingDataUsage = await getRemainingDataUsage(baseRequest);
   return {
-    total: Math.max(initialTotalDataUsage, currentDataUsage + remainingDataUsage),
+    capacity: Math.max(initialDataUsageCapacity, currentDataUsage + remainingDataUsage),
     current: currentDataUsage,
   };
 };

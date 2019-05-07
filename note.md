@@ -27,7 +27,7 @@
         hour: number,
       },
       dataUsageAmounts: {
-        total: number,
+        capacity: number,
         current: number,
       },
     },

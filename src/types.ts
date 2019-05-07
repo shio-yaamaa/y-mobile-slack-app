@@ -18,6 +18,6 @@ export interface DataUsageRecord {
 
 // In GB
 export interface DataUsageAmounts {
-  total: number; // Current + remaining usage
+  capacity: number; // Current + remaining usage
   current: number;
 }
