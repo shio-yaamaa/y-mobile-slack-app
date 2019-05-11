@@ -3,6 +3,7 @@ import { ChartConfiguration } from 'chart.js';
 import { DataUsageRecord } from '../types';
 
 import JSTDateTime from '../lib/JSTDateTime';
+import { typeOf } from '../lib/Utility';
 
 const quickchartUrl = 'https://quickchart.io/chart';
 
@@ -28,7 +29,7 @@ class Chart {
       const record: DataUsageRecord | null = (currentRecordIndex < this.records.length - 1 && this.records[currentRecordIndex].datetime.isSame(currentHour))
         ? this.records[currentRecordIndex]
         : null;
-      labels.push(currentHour.hour === 0 ? currentHour.date.toString() : '');
+      labels.push((currentHour.date % 5 === 0 && currentHour.hour === 0) ? currentHour.date.toString() : '');
       currentDataUsageList.push(record ? record.dataUsageAmounts.current : null);
       expectedDataUsageList.push(null);
       
@@ -45,30 +46,93 @@ class Chart {
         labels,
         datasets: [
           {
-            label: 'Data Usage',
-            data: currentDataUsageList,
-            fill: true,
-          },
-          {
             label: 'Expected Data Usage',
             data: expectedDataUsageList,
+            borderWidth: 1,
+            borderColor: '#666666',
             fill: false,
+          },
+          {
+            label: 'Data Usage',
+            data: currentDataUsageList,
+            borderColor: 'transparent', // borderWidth: 0 doesn't work
+            fill: true,
+            backgroundColor: '#17B4CD',
           },
         ],
       },
       options: {
+        layout: {
+          padding: {
+            top: 30,
+            bottom: 20,
+            left: 20,
+            right: 0,
+          },
+        },
         spanGaps: true,
+        scales: {
+          xAxes: [{
+            gridLines: {
+              display: false,
+              drawBorder: false,
+            },
+            ticks: {
+              autoSkip: false,
+              maxRotation: 0,
+            },
+          }],
+          yAxes: [{
+            gridLines: {
+              lineWidth: 0.5,
+              drawBorder: false,
+            },
+            ticks: {
+              padding: 5,
+            },
+          }],
+        },
+        elements: {
+          point: {
+            radius: 0,
+          },
+        },
+        legend: {
+          display: false,
+        }
       },
     };
   }
 
+  private toStringConfig(): string {
+    const stringify = (target: any, isArrayElement: boolean): string => { // When isArrayElement, the result can be an empty string
+      switch (typeOf(target)) {
+        case 'number':
+        case 'boolean':
+          return target.toString();
+        case 'string':
+          if (target.length === 0) {
+            return isArrayElement ? '' : `''`;
+          }
+          return `'${encodeURIComponent(target)}'`;
+        case 'array':
+          return `[${target.map((element: any) => stringify(element, true)).join(',')}]`;
+        case 'object':
+          const stringifiedEntries = Object.entries(target)
+            .map(([key, value]) => `${key}:${stringify(value, false)}`);
+          return `{${stringifiedEntries.join(',')}}`;
+        case 'null':
+        case 'undefined':
+          return isArrayElement ? '' : 'null';
+        default:
+          return JSON.stringify(target);
+      }
+    };
+    return stringify(this.toConfig(), false);
+  }
+
   public toUrl(): string {
-    const chartConfig = this.toConfig();
-    const chartConfigString = JSON.stringify(chartConfig)
-      .replace(/\s+/g, '') // TODO: Don't remove the spaces in the label
-      .replace(/null/g, '')
-      .replace(/""/g, ''); // Remove empty strings in labels
-    return `${quickchartUrl}?c=${chartConfigString}`;
+    return `${quickchartUrl}?bkg=white&c=${this.toStringConfig()}`;
   }
 }
 
