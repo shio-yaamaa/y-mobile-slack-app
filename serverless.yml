@@ -31,8 +31,6 @@ functions:
     handler: src/functions/fetch.handler
     events:
       - schedule: cron(0 * * * ? *)
-  generate-chart-url:
-    handler: src/functions/generate-chart-url.handler
   notify:
     handler: src/functions/notify.handler
     events:
