@@ -63,7 +63,7 @@ class DB {
 
   constructor() {
     this.documentClient = new AWS.DynamoDB.DocumentClient({
-      region: process.env.DYNAMODB_REGION,
+      region: process.env.AWS_REGION,
     });
   }
 

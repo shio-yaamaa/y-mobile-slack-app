@@ -21,9 +21,15 @@ provider:
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/DataUsageRecords
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+        - s3:PutObjectACL
+      Resource:
+        !Join ["", ["arn:aws:s3:::", !Ref URLStorage]]
   environment:
-    DYNAMODB_REGION: ${self:provider.region}
     DYNAMODB_TABLE_NAME: ${self:resources.Resources.DataUsageRecordsTable.Properties.TableName}
+    URL_STORAGE_BUCKET_NAME: ${self:resources.Resources.URLStorage.Properties.BucketName}
     SENTRY_DSN: ${file(./secrets.yml):SENTRY_DSN}
 
 functions:
@@ -55,6 +61,16 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+    URLStorage:
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Delete
+      Properties:
+        BucketName: url-storage
+        LifecycleConfiguration:
+          Rules:
+            - Id: Expiration
+              ExpirationInDays: 100
+              Status: Enabled
 
 package:
   exclude:
