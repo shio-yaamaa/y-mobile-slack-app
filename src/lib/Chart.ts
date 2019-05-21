@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { ChartConfiguration } from 'chart.js';
 
 import { DataUsageRecord } from '../types';
@@ -8,7 +9,15 @@ import { typeOf } from '../lib/Utility';
 const quickchartUrl = 'https://quickchart.io/chart';
 
 class Chart {
-  constructor(private month: JSTDateTime, private records: DataUsageRecord[]) { }
+  private month: JSTDateTime;
+  private records: DataUsageRecord[];
+  public url: string;
+
+  constructor(month: JSTDateTime, records: DataUsageRecord[]) {
+    this.month = month;
+    this.records = records;
+    this.url = this.toUrl();
+  }
 
   private toConfig(): ChartConfiguration {
     const capacity = Math.max(...this.records.map(record => record.dataUsageAmounts.capacity));
@@ -131,8 +140,13 @@ class Chart {
     return stringify(this.toConfig(), false);
   }
 
-  public toUrl(): string {
+  private toUrl(): string {
     return `${quickchartUrl}?bkg=white&c=${this.toStringConfig()}`;
+  }
+
+  public async toBuffer(): Promise<Buffer> {
+    const response = await axios.get(this.url, { responseType: 'arraybuffer' });
+    return Buffer.from(response.data);
   }
 }
 

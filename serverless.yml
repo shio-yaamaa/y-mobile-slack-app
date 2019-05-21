@@ -24,12 +24,12 @@ provider:
     - Effect: Allow
       Action:
         - s3:PutObject
-        - s3:PutObjectACL
+        - s3:PutObjectAcl
       Resource:
-        !Join ["", ["arn:aws:s3:::", !Ref URLStorage]]
+        !Join ["", ["arn:aws:s3:::", !Ref ChartImageStorage, "/*"]]
   environment:
     DYNAMODB_TABLE_NAME: ${self:resources.Resources.DataUsageRecordsTable.Properties.TableName}
-    URL_STORAGE_BUCKET_NAME: ${self:resources.Resources.URLStorage.Properties.BucketName}
+    CHART_IMAGE_STORAGE_BUCKET_NAME: ${self:resources.Resources.ChartImageStorage.Properties.BucketName}
     SENTRY_DSN: ${file(./secrets.yml):SENTRY_DSN}
 
 functions:
@@ -61,11 +61,11 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-    URLStorage:
+    ChartImageStorage:
       Type: AWS::S3::Bucket
       DeletionPolicy: Delete
       Properties:
-        BucketName: url-storage
+        BucketName: chart-image-storage
         LifecycleConfiguration:
           Rules:
             - Id: Expiration
