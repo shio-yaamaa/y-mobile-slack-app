@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/node';
 
 import { User, YmobileCredential, DataUsageAmounts } from '../types';
 
+import PatientPromise from '../lib/PatientPromise';
 import JSTDateTime from '../lib/JSTDateTime';
 import DB from '../lib/DB';
 
@@ -188,29 +189,20 @@ export const handler: APIGatewayProxyHandler = async (_event, _context) => {
       body: 'Could not get users from DB',
     };
   }
-  
-  // Resolves with an error (do not throw it) when error occurs
-  // so that Promise.all waits until all the tasks finish
-  // even if some of them fail.
-  const fetchForUser = async (user: User): Promise<void | Error> => {
-    try {
-      const dataUsageAmounts = await getDataUsageForSingleUser(user);
-      await DB.addDataUsageRecord(
-        user,
-        {
-          datetime: currentDateTime,
-          dataUsageAmounts: dataUsageAmounts,
-        },
-      );
-      return;
-    } catch (error) {
-      Sentry.captureException(error);
-      return error;
-    }
-  };
 
-  const results = await Promise.all(users.map(user => fetchForUser(user)));
-  const didAllSucceed = results.every(result => !(result instanceof Error));
+  const promises = users.map(async user => {
+    const dataUsageAmounts = await getDataUsageForSingleUser(user);
+    await DB.addDataUsageRecord(
+      user,
+      {
+        datetime: currentDateTime,
+        dataUsageAmounts: dataUsageAmounts,
+      },
+    );
+  });
+  const results = await PatientPromise.all<void>(promises, error => Sentry.captureException(error));
+  const didAllSucceed = promises.length == results.length;
+
   return {
     statusCode: didAllSucceed ? 200 : 500,
     body: didAllSucceed ? 'Success' : 'At least one user failed',
